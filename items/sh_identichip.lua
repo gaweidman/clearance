@@ -35,7 +35,7 @@ function ITEM:PopulateTooltip(tooltip)
         classIndex = CLASS_CREWMAN
     end
 
-    local rankName = ix.class.Get(classIndex).Ranks[1][self:GetData("rank", 1)]
+    local rankName = self:GetData("rankName", "UNDEFINED")
 
     local charName = tooltip:AddRow("charName")
     charName:SetText("Name: "..self:GetData("charName", "Undefined"))

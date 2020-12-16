@@ -32,15 +32,16 @@ MODE_LOCKDOWN = {
     ["color"] = Color(255, 40, 40)
 }
 
-MODE_UNDEFINED = {
+MODE_NO_CARD = {
     ["enum"] = 6, 
-    ["msg"] = "UNDEFINED", 
-    ["color"] = Color(255, 40, 255)
+    ["msg"] = "No Card Detected", 
+    ["color"] = Color(255, 40, 40)
 }
 
-ISB_CLEARANCES = {
-    [1] = 1,
-    [2] = 2
+MODE_UNDEFINED = {
+    ["enum"] = 7, 
+    ["msg"] = "UNDEFINED", 
+    ["color"] = Color(255, 40, 255)
 }
 
 function ENT:Initialize()
@@ -48,6 +49,7 @@ function ENT:Initialize()
 	self:PhysicsInit(SOLID_VPHYSICS)
 	self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)
+    self:SetUseType(SIMPLE_USE)
     
 	local phys = self:GetPhysicsObject()
     if phys:IsValid() then phys:Wake() end
@@ -73,24 +75,86 @@ function ENT:OnRemove()
 end
 
 function ENT:Think()
-    if (CurTime() >= self:GetNetVar("statusWaitEnd", -1) and self:GetNetVar("statusWaitEnd", -1) != -1 and self:GetLockMode() == MODE_ACCESS_GRANTED) then
+    if (CurTime() >= self:GetNetVar("statusWaitEnd", -1) and self:GetNetVar("statusWaitEnd", -1) != -1 and self:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_GRANTED) then
         self:SetLockMode(MODE_SWIPE_CARD)
         for k, v in ipairs(ents.GetAll()) do
             for k2, v2 in pairs(self:GetNetVar("linkedDoors")) do
                 if (v:MapCreationID() == v2) then
+                   
                     v:Fire("Lock")
                     self:SetNetVar("statusWaitEnd", -1)
                 end
             end
         end
-    elseif (CurTime() >= self:GetNetVar("statusWaitEnd", -1) and self:GetNetVar("statusWaitEnd", -1) != -1 and self:GetLockMode() == MODE_ACCESS_DENIED) then
+        self:SetNetVar("statusWaitEnd", -1)
+    elseif (CurTime() >= self:GetNetVar("statusWaitEnd", -1) and self:GetNetVar("statusWaitEnd", -1) != -1 and self:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_DENIED) then
         self:SetLockMode(MODE_SWIPE_CARD)
+        --print("yeah, i'm here")
         self:SetNetVar("statusWaitEnd", -1)
     end
 end
 
-function ENT:Use()
-    
+function ENT:Use(activator, caller, useType, value)
+    if (activator:IsPlayer()) then
+        local hasId = false
+        local idItem = null
+
+        local inv = activator:GetCharacter():GetInventory()
+        // TODO: Add lockdown and open compatibility.
+
+        -- Makes sure you can't use the reader while a message is being displayed.
+        if (self:GetNetVar("statusWaitEnd", -1) != -1) then
+            return
+        end
+
+        local hasId = false
+        local idItem = null
+        for k, v in pairs(inv:GetItemsByUniqueID("identichip", true)) do
+            hasId = true
+            idItem = v
+        end
+
+        if (!hasId) then
+            self:SetLockMode(MODE_NO_CARD)
+            self:SetNetVar("statusWaitEnd", CurTime() + ix.config.Get("Card Swipe Cooldown", 3))
+            return
+        end
+        
+        local itemClrTbl = idItem:GetData("clearance", {
+            ["control"] = 0,
+            ["systems"] = 0,
+            ["isb"] = 0
+        })
+
+        local selfClrType = self:GetNetVar("reqClr", {})["type"]
+        local selfClrLvl = self:GetNetVar("reqClr", {})["level"]
+
+        --[[
+            Checks if the item's clearance level is higher than the reader's required clearance level.
+            The code looks so strange because it uses the required level as an index to get the item's
+            clearance level for that type.
+        ]]--
+        if (itemClrTbl[selfClrType] >= selfClrLvl) then 
+            self:SetLockMode(MODE_ACCESS_GRANTED)
+            self:SetNetVar("statusWaitEnd", CurTime() + ix.config.Get("Card Swipe Cooldown", 3))
+            for k, v in ipairs(ents.GetAll()) do
+                if (v == 1809) then
+                    --print("match but lesser")
+                end
+                for k2, v2 in pairs(self:GetNetVar("linkedDoors", {})) do      
+                    if (v:MapCreationID() == v2) then
+                        --print("match")
+                        v:Fire("Unlock")
+                    end
+                end
+            end
+            return
+        else
+            self:SetLockMode(MODE_ACCESS_DENIED)
+            self:SetNetVar("statusWaitEnd", CurTime() + ix.config.Get("Card Swipe Cooldown", 3))
+            return
+        end
+    end
 end
 
 function ENT:SetLockMode(mode)

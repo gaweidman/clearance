@@ -46,6 +46,7 @@ function PANEL:Init()
 	self.roleEntry:SetPos(8, 142)
 	self.roleEntry:SetSize(150, 20)
 
+	-- Print Button
 	self.printButton = vgui.Create("DButton", self)
 	self.printButton:SetPos(150, 179)
 	self.printButton:SetSize(100, 25)
@@ -70,9 +71,10 @@ function PANEL:Init()
 			self.roleEntry:Clear()
 			self.roleEntry:AddChoice("Crewman")
 			self.roleEntry:AddChoice("Technician")
-			self.roleEntry:AddChoice("Medical")
+			self.roleEntry:AddChoice("Medic")
 			self.roleEntry:AddChoice("Gunner")
 			self.roleEntry:AddChoice("Pilot")
+			self.roleEntry:AddChoice("Trooper")
 		elseif (value == 3) then -- ISB
 			self.roleEntry:Clear()
 			self.roleEntry:AddChoice("Officer")
@@ -103,7 +105,7 @@ function PANEL:Init()
 	end
 
 	self.printButton.DoClick = function()
-		netstream.Start("PrintIDCard", {self.nameEntry:GetValue(), self.orgEntry:GetSelected(),  self.roleEntry:GetSelected(), printerID})
+		netstream.Start("PrintIDChip", {self.nameEntry:GetValue(), self.orgEntry:GetSelected(),  self.roleEntry:GetSelected(), printerID})
 	end
 
 	self:MakePopup()

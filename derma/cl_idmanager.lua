@@ -114,11 +114,10 @@ function PANEL:Init()
 
     -- Print Button
     do
-        self.printButton = vgui.Create("DButton", self)
-        self.printButton:SetPos(150, 371)
-        self.printButton:SetSize(100, 25)
-        self.printButton:SetText("Print")
-        self.printButton:SetDisabled(true)
+        self.updateButton = vgui.Create("DButton", self)
+        self.updateButton:SetPos(150, 371)
+        self.updateButton:SetSize(100, 25)
+        self.updateButton:SetText("Update")
     end
 
 	-- Sets the options for roleEntry depending on the value of orgEntry.
@@ -151,31 +150,31 @@ function PANEL:Init()
             end
 
             if (self.nameEntry != "" and self.roleEntry:GetValue() != "") then 
-                self.printButton:SetDisabled(false)
+                self.updateButton:SetDisabled(false)
             else
-                self.printButton:SetDisabled(true)
+                self.updateButton:SetDisabled(true)
             end
         end
         
         self.roleEntry.OnSelect = function(index, value, data)
             if (self.nameEntry != "" and self.orgEntry:GetValue() != "") then 
-                self.printButton:SetDisabled(false)
+                self.updateButton:SetDisabled(false)
             else
-                self.printButton:SetDisabled(true)
+                self.updateButton:SetDisabled(true)
             end
         end
 
         self.nameEntry.OnChange = function(index, value, data)
             if (self.roleEntry:GetValue() != "" and self.orgEntry:GetValue() != "") then 
-                self.printButton:SetDisabled(false)
+                self.updateButton:SetDisabled(false)
             else
-                self.printButton:SetDisabled(true)
+                self.updateButton:SetDisabled(true)
             end
         end
     end
 
     -- Print ID
-    self.printButton.DoClick = function()
+    self.updateButton.DoClick = function()
         local newClrTbl = {
             ["control"] = self.ctrlEntry:GetValue(),
             ["systems"] = self.sysEntry:GetValue(),
@@ -191,6 +190,8 @@ function PANEL:Init()
             self.rankEntry:GetValue(),
             
         })
+
+        self:Close()
     end
 
 

@@ -1,6 +1,6 @@
 MODE_SWIPE_CARD = {
     ["enum"] = 1, 
-    ["msg"] = "Swipe\nCard", 
+    ["msg"] = "Insert\nIdentichip", 
     ["color"] = Color(255, 255, 255)
 }
 
@@ -40,11 +40,6 @@ function PLUGIN:SaveReaders()
     for k, v in ipairs(ents.FindByClass("ix_reader")) do
         if (IsValid(v)) then
 
-            -- This code here makes it so the doors don't save on access granted or access denied, because that will cause bugs.
-            if (v:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_DENIED or v:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_GRANTED) then
-                v:SetNetVar("mode", MODE_SWIPE_CARD)
-            end
-
             readers[#readers + 1] = {
                 v:GetPos(),
                 v:GetAngles(),
@@ -53,7 +48,7 @@ function PLUGIN:SaveReaders()
                 v:GetNetVar("reqClr", {})
             }
 
-            if (v:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_DENIED or v:GetNetVar("mode", MODE_UNDEFINED) == MODE_ACCESS_GRANTED) then
+            if (v:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_DENIED.enum or v:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_GRANTED.enum) then
                 v[4] = MODE_SWIPE_CARD
             end
         end
@@ -74,7 +69,7 @@ function PLUGIN:LoadReaders()
         readerEnt:SetNetVar("mode", v[4])
         readerEnt:SetNetVar("reqClr", v[5])
 
-        if (v[4].enum == MODE_SWIPE_CARD.enum) then
+        if (v[4].enum == MODE_SWIPE_CARD.enum or v[4].enum == MODE_LOCKDOWN.enum) then
             for k2, v2 in ipairs(ents.GetAll()) do
                 for k3, v3 in pairs(v[3]) do
                     if (v2:MapCreationID() == v3) then

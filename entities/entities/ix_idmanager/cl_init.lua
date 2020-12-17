@@ -6,8 +6,8 @@ end
 function ENT:Draw()
 	self.Entity:DrawModel()
 
-	cam.Start3D2D(self:GetPos() + Vector(-25, 0, 10), self:GetAngles() + Angle(90, 0, 0), 0.1)
-		surface.SetDrawColor(Color(255, 255, 255))
-		surface.DrawRect(0, 0, 400, 400)
+	local yaw = self:GetAngles()[2]
+	cam.Start3D2D(self:GetPos() + Vector(0, 0, 12), Angle(0, yaw+90, 75), 0.1)
+		draw.DrawText("Identichip Manager", "ScoreboardDefaultTitle", 0, 0, Color(55, 110, 183), TEXT_ALIGN_CENTER)
 	cam.End3D2D()
 end

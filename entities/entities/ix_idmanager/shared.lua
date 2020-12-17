@@ -1,8 +1,7 @@
-DEFINE_BASECLASS("base_gmodentity");
+ENT.Type = "anim"
 
-ENT.Type = "anim";
-ENT.Author = "QIncarnate";
-ENT.PrintName = "ID Manager";
-ENT.Category = "Helix"
-ENT.Spawnable = true;
-ENT.AdminSpawnable = true;
+ENT.Author = "QIncarnate"
+ENT.PrintName = "ID Manager"
+ENT.Category = "Helix - Clearance"
+ENT.Spawnable = true
+ENT.AdminOnly = true

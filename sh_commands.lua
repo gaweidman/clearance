@@ -35,7 +35,8 @@ MODE_UNDEFINED = {
 }
 
 do
-	local COMMAND = {}
+    local COMMAND = {}
+    COMMAND.adminOnly = true
 
     function COMMAND:OnRun(client, message)
         local entity = client:GetEyeTrace().Entity
@@ -55,6 +56,8 @@ end
 
 do
 	local COMMAND = {}
+
+    COMMAND.adminOnly = true
 
     function COMMAND:OnRun(client, message)
         local door = client:GetEyeTrace().Entity -- The entity the player is looking at, suppose to be a door.
@@ -111,91 +114,12 @@ end
 do
     local COMMAND = {}
 
-    COMMAND.arguments = ix.type.text
-
-    function COMMAND:OnRun(client, mode)
-        local entity = client:GetEyeTrace().Entity
-
-        if (!IsValid(entity) or entity:GetClass() != "ix_reader") then
-            client:SetNetVar("selectedReaderID", nil)
-            return "That is not a valid entity!"
-        end
-
-        mode = string.upper(mode)
-
-        if (mode == "RESTRICTED") then
-            entity:SetLockMode(MODE_SWIPE_CARD)
-            for k, v in pairs(readerEnt:GetNetVar("linkedDoors", {})) do
-                for k2, v2 in ipairs(ents.GetAll()) do
-                    if (v2:MapCreationID() == v) then
-                        v2:Fire("Lock")
-                    end
-                end
-            end
-        elseif (mode == "OPEN") then
-
-            entity:SetLockMode(MODE_OPEN)
-            for k, v in pairs(readerEnt:GetNetVar("linkedDoors", {})) do
-                for k2, v2 in ipairs(ents.GetAll()) do
-                    if (v2:MapCreationID() == v) then
-                        v2:Fire("Unlock")
-                    end
-                end
-            end
-
-        elseif (mode == "LOCKDOWN") then
-
-            entity:SetLockMode(MODE_LOCKDOWN)
-            for k, v in pairs(readerEnt:GetNetVar("linkedDoors", {})) do
-                for k2, v2 in ipairs(ents.GetAll()) do
-                    if (v2:MapCreationID() == v) then
-                        v2:Fire("Lock")
-                    end
-                end
-            end
-
-        else
-            return "Invalid reader mode!"
-        end
-
-	end
-
-	ix.command.Add("SetReaderMode", COMMAND) -- TODO: Add rank and clearance checking.
-end
-
-do
-    local COMMAND = {}
-
-    COMMAND.arguments = ix.type.text
-
-    function COMMAND:OnRun(client, mode)
-        local entity = client:GetEyeTrace().Entity
-        entity:Fire("Lock")
-	end
-
-	ix.command.Add("LockDoor", COMMAND) -- TODO: Add rank and clearance checking.
-end
-
-do
-    local COMMAND = {}
-
-    COMMAND.arguments = ix.type.text
-
-    function COMMAND:OnRun(client, mode)
-        local entity = client:GetEyeTrace().Entity
-        entity:Fire("Unlock")
-	end
-
-    ix.command.Add("UnlockDoor", COMMAND) -- TODO: Add rank and clearance checking.
-end
-
-do
-    local COMMAND = {}
-
     COMMAND.arguments = {
         ix.type.string,
         ix.type.number
     }
+
+    COMMAND.adminOnly = true
 
     function COMMAND:OnRun(client, clrType, level)
         local entity = client:GetEyeTrace().Entity
@@ -217,19 +141,7 @@ do
         end
 	end
 
-    ix.command.Add("SetClearance", COMMAND) -- TODO: Add rank and clearance checking.
-end
-
-do
-    local COMMAND = {}
-
-    function COMMAND:OnRun(client)
-        for k, v in ipairs(ents.FindByClass("ix_reader")) do
-            v:Remove()
-        end
-	end
-
-    ix.command.Add("RemoveReaders", COMMAND) -- TODO: Add rank and clearance checking.
+    ix.command.Add("SetClearance", COMMAND)
 end
 
 do
@@ -238,12 +150,170 @@ do
     function COMMAND:OnRun(client)
         local entity = client:GetEyeTrace().Entity
 
-        if (!IsValid(entity)) then
+        if (!IsValid(entity) and entity:IsReader()) then
             return "That is not a valid entity!"
+        elseif (entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_DENIED.enum or entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_GRANTED.enum) then
+            return "You cannot lock down this reader right now!"
         else
-            client:ChatPrint(entity:MapCreationID())
+            local inv = client:GetCharacter():GetInventory()
+
+            local hasId = false
+            local idItem = null
+            for k, v in pairs(inv:GetItemsByUniqueID("identichip", true)) do
+                hasId = true
+                idItem = v
+            end
+
+            if (!hasId) then
+                return "You don't have an identichip!"
+            end
+            
+            local itemClrTbl = idItem:GetData("clearance", {
+                ["control"] = 0,
+                ["systems"] = 0,
+                ["isb"] = 0
+            })
+
+            local idIsISB = itemClrTbl.isb > 0
+
+            if (entity:GetNetVar("isbLocked", false) and !idIsISB) then -- This makes sure that if the reader was locked down by an ISB clearance, it can only be unlocked by someone with an ISB clearance.
+                return "You cannot lock down this reader right now!"
+            end
+
+            local rdrClrType = entity:GetNetVar("reqClr", {})["type"]
+            local rdrClrLvl = entity:GetNetVar("reqClr", {})["level"]
+
+            if (itemClrTbl[rdrClrType] >= rdrClrLvl + 1 or idIsISB) then 
+                entity:SetNetVar("mode", MODE_LOCKDOWN)
+                entity:SetNetVar("isbLocked", idIsISB)
+                for k, v in ipairs(ents.GetAll()) do
+                    for k2, v2 in pairs(entity:GetNetVar("linkedDoors", {})) do      
+                        if (v:MapCreationID() == v2) then
+                            v:Fire("Lock")
+                        end
+                    end
+                end
+            else
+                return "You do not have high enough clearance to lock down this reader!"
+            end
         end
 	end
 
-    ix.command.Add("GetCreationID", COMMAND) -- TODO: Add rank and clearance checking.
+    ix.command.Add("ReaderLockdown", COMMAND)
+end
+
+do
+    local COMMAND = {}
+
+    function COMMAND:OnRun(client)
+        local entity = client:GetEyeTrace().Entity
+
+        if (!IsValid(entity) and entity:IsReader()) then
+            return "That is not a valid entity!"
+        elseif (entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_DENIED.enum or entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_GRANTED.enum) then
+            return "You cannot lock open this reader right now!"
+        else
+            local inv = client:GetCharacter():GetInventory()
+
+            local hasId = false
+            local idItem = null
+            for k, v in pairs(inv:GetItemsByUniqueID("identichip", true)) do
+                hasId = true
+                idItem = v
+            end
+
+            if (!hasId) then
+                return "You don't have an identichip!"
+            end
+            
+            local itemClrTbl = idItem:GetData("clearance", {
+                ["control"] = 0,
+                ["systems"] = 0,
+                ["isb"] = 0
+            })
+
+            local idIsISB = itemClrTbl.isb > 0
+
+            if (entity:GetNetVar("isbLocked", false) and !idIsISB) then -- This makes sure that if the reader was locked down by an ISB clearance, it can only be unlocked by someone with an ISB clearance.
+                return "You cannot lock open this reader right now!"
+            end
+
+            local rdrClrType = entity:GetNetVar("reqClr", {})["type"]
+            local rdrClrLvl = entity:GetNetVar("reqClr", {})["level"]
+
+            if (itemClrTbl[rdrClrType] >= rdrClrLvl + 1) then 
+                entity:SetNetVar("mode", MODE_OPEN)
+                entity:SetNetVar("isbLocked", false)
+                for k, v in ipairs(ents.GetAll()) do
+                    for k2, v2 in pairs(entity:GetNetVar("linkedDoors", {})) do      
+                        if (v:MapCreationID() == v2) then
+                            v:Fire("Unlock")
+                        end
+                    end
+                end
+            else
+                return "You do not have high enough clearance to lock open this reader!"
+            end
+        end
+	end
+
+    ix.command.Add("ReaderLockOpen", COMMAND)
+end
+
+do
+    local COMMAND = {}
+
+    function COMMAND:OnRun(client)
+        local entity = client:GetEyeTrace().Entity
+
+        if (!IsValid(entity) and entity:IsReader()) then
+            return "That is not a valid entity!"
+        elseif (entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_DENIED.enum or entity:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_ACCESS_GRANTED.enum) then
+            return "You cannot restrict this reader right now!"
+        else
+            local inv = client:GetCharacter():GetInventory()
+
+            local hasId = false
+            local idItem = null
+            for k, v in pairs(inv:GetItemsByUniqueID("identichip", true)) do
+                hasId = true
+                idItem = v
+            end
+
+            if (!hasId) then
+                return "You don't have an identichip!"
+            end
+            
+            local itemClrTbl = idItem:GetData("clearance", {
+                ["control"] = 0,
+                ["systems"] = 0,
+                ["isb"] = 0
+            })
+
+            local idIsISB = itemClrTbl.isb > 0
+
+            if (entity:GetNetVar("isbLocked", false) and !idIsISB) then -- This makes sure that if the reader was locked down by an ISB clearance, it can only be unlocked by someone with an ISB clearance.
+                return "You cannot restrict this reader right now!"
+            end
+
+            local rdrClrType = entity:GetNetVar("reqClr", {})["type"]
+            local rdrClrLvl = entity:GetNetVar("reqClr", {})["level"]
+
+            if (itemClrTbl[rdrClrType] >= rdrClrLvl + 1) then 
+                entity:SetNetVar("mode", MODE_SWIPE_CARD)
+                entity:SetNetVar("isbLocked", false)
+                for k, v in ipairs(ents.GetAll()) do
+                    for k2, v2 in pairs(entity:GetNetVar("linkedDoors", {})) do      
+                        if (v:MapCreationID() == v2) then
+                            v:Fire("Lock")
+                        end
+                    end
+                end
+            else
+                return "You do not have high enough clearance to restrict this reader!"
+            end
+        end
+	end
+
+    ix.command.Add("ReaderRestrict", COMMAND)
 end

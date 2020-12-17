@@ -3,7 +3,7 @@ AddCSLuaFile("shared.lua")
 include("shared.lua")
 
 function ENT:Initialize()
-	self:SetModel("models/props_c17/FurnitureWashingmachine001a.mdl") 
+	self:SetModel("models/cire992/props/computerscreen.mdl") 
 	self:PhysicsInit(SOLID_VPHYSICS)
 	self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)

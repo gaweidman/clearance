@@ -44,7 +44,7 @@ function ENT:Draw()
 	self.Entity:DrawModel()
 	local mode = self:GetNetVar("mode", MODE_UNDEFINED)
 
-	cam.Start3D2D(self:GetPos() + Vector(-10, 0, 0), self:GetAngles() + Angle(0, 90, 90), 0.1)
-		draw.DrawText(mode.msg, "ScoreboardDefaultTitle", 200, 0, mode.color, TEXT_ALIGN_CENTER)
+	cam.Start3D2D(self:GetPos() + Vector(0, 0, 9), self:GetAngles() + Angle(0, 0, 0), 0.1)
+		draw.DrawText(mode.msg, "ScoreboardDefaultTitle", 0, 0, mode.color, TEXT_ALIGN_CENTER)
 	cam.End3D2D()
 end

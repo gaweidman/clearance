@@ -45,7 +45,7 @@ MODE_UNDEFINED = {
 }
 
 function ENT:Initialize()
-	self:SetModel("models/props_c17/door01_left.mdl") 
+	self:SetModel("models/lt_c/holo_keypad.mdl") 
 	self:PhysicsInit(SOLID_VPHYSICS)
 	self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)
@@ -80,7 +80,7 @@ function ENT:Think()
         for k, v in ipairs(ents.GetAll()) do
             for k2, v2 in pairs(self:GetNetVar("linkedDoors")) do
                 if (v:MapCreationID() == v2) then
-                   
+                    v:Fire("Close")
                     v:Fire("Lock")
                     self:SetNetVar("statusWaitEnd", -1)
                 end
@@ -95,14 +95,13 @@ function ENT:Think()
 end
 
 function ENT:Use(activator, caller, useType, value)
-    if (activator:IsPlayer()) then
+    if (activator:IsPlayer() and self:GetNetVar("mode", MODE_UNDEFINED).enum == MODE_SWIPE_CARD.enum) then
         local hasId = false
         local idItem = null
 
         local inv = activator:GetCharacter():GetInventory()
-        // TODO: Add lockdown and open compatibility.
 
-        -- Makes sure you can't use the reader while a message is being displayed.
+        -- Makes sure you can't use the reader while an access granted/denied message is being displayed.
         if (self:GetNetVar("statusWaitEnd", -1) != -1) then
             return
         end
@@ -143,7 +142,7 @@ function ENT:Use(activator, caller, useType, value)
                 end
                 for k2, v2 in pairs(self:GetNetVar("linkedDoors", {})) do      
                     if (v:MapCreationID() == v2) then
-                        --print("match")
+                        --v:Fire("Open")
                         v:Fire("Unlock")
                     end
                 end
